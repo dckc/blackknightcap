@@ -1,2 +1,2 @@
-'''@@not much to see here.
+'''admin_lib package
 '''
