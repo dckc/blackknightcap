@@ -49,7 +49,7 @@ def makeBrandPair(nickname):
       >>> uu.unseal(x)
       Traceback (most recent call last):
       ...
-      UnsealingException
+      TypeError
 
     '''
 
@@ -75,7 +75,7 @@ def makeBrandPair(nickname):
     def _unseal(box):
         shared[0] = noObject
         box.shareContent()
-        if (shared[0] is noObject): raise UnsealingException
+        if (shared[0] is noObject): raise TypeError
         contents = shared[0]
         shared[0] = noObject
         return contents
@@ -86,9 +86,6 @@ def makeBrandPair(nickname):
 
     return (sealer, unsealer)
 
-
-class UnsealingException(Exception):
-    pass
 
 class EDef:
     '''Imitate e object definition using 'anonymous' python classes.
