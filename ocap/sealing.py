@@ -1,4 +1,5 @@
-'''sealing -- E's Rights Amplification mechanism
+'''sealing -- Emulate E's Rights Amplification mechanism in Python
+------------------------------------------------------------------
 
 From  `Rights Amplification section of ELib: Inter-Object Semantics`__:
 
@@ -30,10 +31,11 @@ __copyright__ = 'Copyright (c) 2011 Univeristy of Kansas Medical Center'
 __license__ = 'Apache 2'
 __docformat__ = "restructuredtext en"
 
+
 def makeBrandPair(nickname):
     '''Returns a Sealer/Unsealer pair
     identified with a new unique brand of the specified (non-unique) name.
-    
+
       >>> s, u = makeBrandPair('bob')
       >>> s
       <bob sealer>
@@ -62,26 +64,27 @@ def makeBrandPair(nickname):
         # so we define an auxiliary function
         def _shareContent():
             shared[0] = obj
-        box = EDef(shareContent = _shareContent,
-                   __repr__ = lambda: '<%s sealed box>' % nickname
+        box = EDef(shareContent=_shareContent,
+                   __repr__=lambda: '<%s sealed box>' % nickname
                    )
         return box
 
     sealer = EDef(
-        seal = makeSealedBox,
-        __repr__ = lambda: '<%s sealer>' % nickname
+        seal=makeSealedBox,
+        __repr__=lambda: '<%s sealer>' % nickname
         )
 
     def _unseal(box):
         shared[0] = noObject
         box.shareContent()
-        if (shared[0] is noObject): raise TypeError
+        if (shared[0] is noObject):
+            raise TypeError
         contents = shared[0]
         shared[0] = noObject
         return contents
 
-    unsealer = EDef(unseal = _unseal,
-                    __repr__ = lambda: '<%s unsealer>' % nickname
+    unsealer = EDef(unseal=_unseal,
+                    __repr__=lambda: '<%s unsealer>' % nickname
                     )
 
     return (sealer, unsealer)
@@ -97,8 +100,9 @@ class EDef:
 
     Note the use of old-style classes.
     '''
-    def __init__(self, **entries): self.__dict__.update(entries)
+    def __init__(self, **entries):
+        self.__dict__.update(entries)
 
     def __repr__(self):
-        args = ['%s=%s' % (k, repr(v)) for (k,v) in vars(self).items()]
+        args = ['%s=%s' % (k, repr(v)) for (k, v) in vars(self).items()]
         return '<%s>' % ', '.join(args)
