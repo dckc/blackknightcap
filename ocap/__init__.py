@@ -1,7 +1,30 @@
 '''admin_lib -- Provide HERON policy administration independent of Web layer.
 
-Unit Testing
-------------
+AuthorityInjection: Capability-based Security and Dependency Injection
+----------------------------------------------------------------------
+
+The `Object-capability model`__ is useful for establishing security
+properties of a large system in terms of properties of the parts:
+
+  Advantages that motivate object-oriented programming, such as
+  encapsulation or information hiding, modularity, and separation of
+  concerns, correspond to security goals such as `least privilege`__ and
+  privilege separation in capability-based programming.
+
+__ http://en.wikipedia.org/wiki/Object-capability_model
+__ http://en.wikipedia.org/wiki/Principle_of_least_privilege
+
+This package makes extensive use of AuthorityInjection__, which is the
+use of dependency injection in service of both separation of concerns
+(and hence testability) and secure composition.  See
+:mod:`heron_wsgi.admin_lib.rtconfig` for details on the dependency
+injection API and its use in runtime configuration.
+
+__ http://informatics.kumc.edu/work/wiki/AuthorityInjection
+
+
+Unit Testing with doctest
+-------------------------
 
 Unit testing is done with :mod:`doctest`; to run the unit tests
 for one module::
@@ -10,10 +33,12 @@ for one module::
 
 .. note:: You can run the tests for most (all?) of the modules in this
           package with `tests.py`, but this is a kludge that should be
-          replaced by `nosetests`.
+          replaced by using nose__ and `--with-doctest`.
 
-Integration Testing
--------------------
+__ http://readthedocs.org/docs/nose/en/latest/
+
+Integration Testing: running modules as scripts
+-----------------------------------------------
 
 Many of the modules in this package run from the command line.
 For example::
