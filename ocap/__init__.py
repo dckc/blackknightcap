@@ -22,6 +22,8 @@ injection API and its use in runtime configuration.
 
 __ http://informatics.kumc.edu/work/wiki/AuthorityInjection
 
+The RunTime modules are trusted; they serve as a sort of powerbox.
+See also integration testing below.
 
 Unit Testing with doctest
 -------------------------
