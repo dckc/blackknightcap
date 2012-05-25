@@ -65,7 +65,7 @@ def Readable(path, os_path, os_listdir, openf):
 
 
 def WebReadable(base, urlopener, RequestClass):
-    '''Wrap the python urllib2 API in the Emily/E least-authority API.
+    '''Read-only wrapping of urllib2 in the Emily/E least-authority API.
 
     :param base: base URL
     :param urlopener: as from `urllib2.build_opener()`
@@ -110,6 +110,8 @@ def WebReadable(base, urlopener, RequestClass):
     Traceback (most recent call last):
        ...
     LookupError: Path does not lead to a subordinate.
+
+    .. todo:: consider taking a hint/name parameter for printing.
     '''
     def __repr__():
         return 'WebReadable(...)'
@@ -159,13 +161,39 @@ def WebReadable(base, urlopener, RequestClass):
                 getBytes, fullPath)
 
 
+def WebPostable(base, urlopener, RequestClass):
+    '''Extend WebReadable with POST support.
+
+    >>> urlopener = _MockMostPagesOKButSome404('Z')
+    >>> from urllib2 import Request
+    >>> doweb = WebPostable('http://example/stuff/', urlopener, Request)
+
+    >>> doweb.post('stuff').read()
+    'you posted: stuff'
+
+    All the `ReadableWeb` methods work::
+
+    >>> doweb.subRdFile('rd').fullPath()
+    'http://example/stuff/rd'
+    '''
+    delegate = WebReadable(base, urlopener, RequestClass)
+
+    def __repr__():
+        return 'WebPostable(...)'
+
+    def post(content):
+        return urlopener.open(base, content)
+
+    return edef(__repr__, post, delegate=delegate)
+
+
 class _MockMostPagesOKButSome404(object):
     '''Raise 404 for pages containing given strings; otherwise succeed.
     '''
     def __init__(self, bad):
         self.bad = bad
 
-    def open(self, request_or_address):
+    def open(self, request_or_address, content=None):
         from StringIO import StringIO
 
         try:
@@ -175,6 +203,10 @@ class _MockMostPagesOKButSome404(object):
 
         if [txt for txt in self.bad if txt in address]:
             raise IOError('404...')
+
+        if content:
+            return StringIO('you posted: ' + content)
+
         return StringIO('page content...')
 
 
@@ -190,17 +222,20 @@ class Editable(object):
     pass
 
 
-def edef(*methods):
+def edef(*methods, **kwargs):
     '''Imitate E method suite definition.
 
     .. todo:: factor out overlap with `sealing.EDef`
     '''
     lookup = dict([(f.__name__, f) for f in methods])
+    delegate = kwargs.get('delegate', None)
 
     class EObj(object):
         def __getattr__(self, n):
             if n in lookup:
                 return lookup[n]
+            if delegate is not None:
+                return getattr(delegate, n)
             raise AttributeError(n)
 
     return EObj()
