@@ -226,6 +226,8 @@ def edef(*methods, **kwargs):
     '''Imitate E method suite definition.
 
     .. todo:: factor out overlap with `sealing.EDef`
+    .. todo:: consider using a metaclass instead
+    ref http://stackoverflow.com/questions/100003/what-is-a-metaclass-in-python
     '''
     lookup = dict([(f.__name__, f) for f in methods])
     delegate = kwargs.get('delegate', None)
