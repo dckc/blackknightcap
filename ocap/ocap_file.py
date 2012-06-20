@@ -114,7 +114,7 @@ def WebReadable(base, urlopener, RequestClass):
     .. todo:: consider taking a hint/name parameter for printing.
     '''
 
-    assert hasattr(urlopener, open), "oops! bad urlopener"
+    assert hasattr(urlopener, 'open'), "oops! bad urlopener"
 
     def __repr__():
         return 'WebReadable(...)'
