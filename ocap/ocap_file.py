@@ -45,10 +45,14 @@ def Readable(path, os_path, os_listdir, openf):
         return os_path.exists(path)
 
     def subRdFiles():
-        return (Readable(os_path.join(path, n), os_path, os_listdir, openf)
-                for n in os_listdir(path))
+        return (subRdFile(n) for n in os_listdir(path))
 
     def subRdFile(n):
+        here = fullPath()
+        there = os_path.join(here, n)
+        if not there.startswith(here):
+            raise LookupError('Path [%s] not subordinate to [%s]' % (
+                n, here))
         return Readable(os_path.join(path, n), os_path, os_listdir, openf)
 
     def inChannel():
