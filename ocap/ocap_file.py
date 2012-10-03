@@ -35,8 +35,24 @@ def Readable(path, os_path, os_listdir, openf):
     but its output depends on platform, so it's not a pure function.
 
     >>> import os
-    >>> Readable('.', os.path, os.listdir, open).isDir()
+    >>> cwd = Readable('.', os.path, os.listdir, open)
+    >>> cwd.isDir()
     True
+
+    Authority only goes "down" in the filesystem:
+
+    >>> cwd.subRdFile('../uncle_file')
+    ... # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+      ...
+    LookupError: Path [../uncle_file] not subordinate ...
+
+    >>> cwd.subRdFile('/etc/passwd')
+    ... # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+      ...
+    LookupError: Path [/etc/passwd] not subordinate ...
+
     '''
     def isDir():
         return os_path.isdir(path)
@@ -49,7 +65,7 @@ def Readable(path, os_path, os_listdir, openf):
 
     def subRdFile(n):
         here = fullPath()
-        there = os_path.join(here, n)
+        there = os_path.normpath(os_path.join(here, n))
         if not there.startswith(here):
             raise LookupError('Path [%s] not subordinate to [%s]' % (
                 n, here))
