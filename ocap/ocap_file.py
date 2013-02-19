@@ -240,4 +240,7 @@ def edef(*methods, **kwargs):
                 return getattr(delegate, n)
             raise AttributeError(n)
 
+        def __repr__(self):
+            return 'obj(%s)' % lookup.keys()
+
     return EObj()
