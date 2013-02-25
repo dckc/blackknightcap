@@ -18,7 +18,12 @@ Traceback (most recent call last):
   ...
 NotVouchable
 
+We have to be prepared for junk:
 
+>>> inspector.vouch('random junk')
+Traceback (most recent call last):
+    ...
+NotVouchable
 '''
 
 from ocap_file import edef

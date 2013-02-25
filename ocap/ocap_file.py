@@ -60,6 +60,9 @@ def Readable(path, os_path, os_listdir, openf):
     def fullPath():
         return os_path.abspath(path)
 
+    def __repr__():
+        return '<%s>' % fullPath()
+
     return edef(isDir, exists, subRdFiles, subRdFile, inChannel,
                 getBytes, fullPath)
 
