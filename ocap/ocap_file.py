@@ -213,7 +213,14 @@ class _MockMostPagesOKButSome404(object):
         return StringIO('page content...')
 
 
-class Editable(object):
+class Token(object):
+    '''a la Joe-E token. An authority-bearing object.
+    '''
+    def __repr__(self):
+        raise NotImplementedError('Token subclasses must override __repr__')
+
+
+class Editable(Token):
     #ro : readable;
     #subEdFiles : unit -> editable list;
     #subEdFile : string -> editable;
@@ -232,7 +239,7 @@ def edef(*methods, **kwargs):
     .. todo:: consider using a metaclass instead
     ref http://stackoverflow.com/questions/100003/what-is-a-metaclass-in-python
     '''
-    lookup = dict([(f.__name__, f) for f in methods])
+    lookup = dict(kwargs, **dict([(f.__name__, f) for f in methods]))
     delegate = kwargs.get('delegate', None)
 
     class EObj(object):
@@ -244,6 +251,8 @@ def edef(*methods, **kwargs):
             raise AttributeError(n)
 
         def __repr__(self):
-            return 'obj(%s)' % lookup.keys()
+            f = lookup.get('__repr__', None)
+
+            return f() if f else 'obj(%s)' % lookup.keys()
 
     return EObj()

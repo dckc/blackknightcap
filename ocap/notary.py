@@ -29,7 +29,7 @@ NotVouchable
 from ocap_file import edef
 
 
-def makeNotary():
+def makeNotary(label=''):
     nonObject = object()
     vouchableObject = slot(nonObject)
 
@@ -47,7 +47,10 @@ def makeNotary():
         except Exception as ex:
             unvouchedException(obj, ex)
 
-    inspector = edef(vouch)
+    def vouch_repr():
+        return 'Inspector(%s)' % label
+
+    inspector = edef(vouch, __repr__=vouch_repr)
 
     def startVouch(obj):
         update(vouchableObject, obj)
@@ -55,7 +58,10 @@ def makeNotary():
     def getInspector():
         return inspector
 
-    return edef(startVouch, getInspector)
+    def __repr__():
+        return 'Notary(%s)' % label
+
+    return edef(startVouch, getInspector, __repr__)
 
 
 def slot(init=None):
