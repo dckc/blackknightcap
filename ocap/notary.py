@@ -86,7 +86,7 @@ def unvouchedException(obj, ex):
     raise NotVouchable(obj, ex)
 
 
-def WidgetInc():
+def WidgetInc():  # pragma: nocover
     notary = makeNotary()
 
     def makeOrderForm(salesPerson):
@@ -116,12 +116,12 @@ def WidgetInc():
     return WidgetInspectionService, getOrderFormFromBob
 
 
-def getOrderFormFromBobsEvilTwin():
+def getOrderFormFromBobsEvilTwin():  # pragma: nocover
     """Bob's evil twinn """
     return forgeOrderForm("bob")
 
 
-def forgeOrderForm(salesPerson):
+def forgeOrderForm(salesPerson):  # pragma: nocover
     orderForm = None  # forward reference
 
     def agent():
