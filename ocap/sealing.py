@@ -76,7 +76,10 @@ def makeBrandPair(nickname):
 
     def _unseal(box):
         shared[0] = noObject
-        box.shareContent()
+        try:
+            box.shareContent()
+        except:
+            raise TypeError
         if (shared[0] is noObject):
             raise TypeError
         contents = shared[0]
