@@ -217,7 +217,9 @@ class Token(object):
     '''a la Joe-E token. An authority-bearing object.
     '''
     def __repr__(self):
-        raise NotImplementedError('Token subclasses must override __repr__')
+        '''subclasses should override
+        '''
+        return self.__class__.__name__ + '()'
 
 
 class Editable(Token):
