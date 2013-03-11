@@ -28,7 +28,7 @@ __ http://www.hpl.hp.com/techreports/2006/HPL-2006-116.html
 from urlparse import urljoin
 
 
-def Readable(path, os_path, os_listdir, openf):
+def Readable(path0, os_path, os_listdir, openf):
     '''Wrap the python file API in the Emily/E least-authority API.
 
     os.path.join might not seem to need any authority,
@@ -38,6 +38,8 @@ def Readable(path, os_path, os_listdir, openf):
     >>> Readable('.', os.path, os.listdir, open).isDir()
     True
     '''
+    path = os_path.abspath(path0)
+
     def isDir():
         return os_path.isdir(path)
 
@@ -58,7 +60,7 @@ def Readable(path, os_path, os_listdir, openf):
         return openf(path).read()
 
     def fullPath():
-        return os_path.abspath(path)
+        return path
 
     def __repr__():
         return '<%s>' % fullPath()
