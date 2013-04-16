@@ -45,11 +45,15 @@ def Readable(path, os_path, os_listdir, openf):
         return os_path.exists(path)
 
     def subRdFiles():
-        return (Readable(os_path.join(path, n), os_path, os_listdir, openf)
+        return (subRdFile(n)
                 for n in os_listdir(path))
 
     def subRdFile(n):
-        return Readable(os_path.join(path, n), os_path, os_listdir, openf)
+        there = os_path.join(path, n)
+        if not there.startswith(path):
+            raise LookupError('Path does not lead to a subordinate.')
+
+        return Readable(there, os_path, os_listdir, openf)
 
     def inChannel():
         return openf(path)
@@ -210,16 +214,40 @@ class _MockMostPagesOKButSome404(object):
         return StringIO('page content...')
 
 
-class Editable(object):
-    #ro : readable;
-    #subEdFiles : unit -> editable list;
-    #subEdFile : string -> editable;
-    #outChannel : unit -> out_channel;
-    #setBytes : string -> unit;
-    #mkDir : unit -> unit;
-    #createNewFile : unit -> unit;
-    #delete : unit -> unit;
-    pass
+def Editable(path, os, openf):
+    def ro():
+        def openrd(p):
+            return openf(p, 'r')
+        return Readable(path, os.path, os.listdir, openrd)
+
+    def subEdFiles():
+        return (subEdFile(n)
+                for n in os.listdir(path))
+
+    def subEdFile(n):
+        there = os.path.join(path, n)
+        if not there.startswith(path):
+            raise LookupError('Path does not lead to a subordinate.')
+
+        return Editable(there, os, openf)
+        
+    def outChannel():
+        return openf(path, 'w')
+
+    def setBytes(b):
+        outChannel.write(b)
+
+    def mkDir():
+        os.mkdir(path)
+
+    def createNewFile():
+        setBytes('')
+
+    def delete():
+        os.remove(path)
+
+    return edef(ro, subEdFiles, subEdFile, outChannel,
+                setBytes, mkDir, createNewFile, delete)
 
 
 def edef(*methods, **kwargs):
