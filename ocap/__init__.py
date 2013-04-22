@@ -1,4 +1,5 @@
 '''admin_lib -- Provide HERON policy administration independent of Web layer.
+=============================================================================
 
 AuthorityInjection: Capability-based Security and Dependency Injection
 ----------------------------------------------------------------------
