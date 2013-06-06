@@ -296,6 +296,15 @@ def walk_ed(top):
             yield x
 
 
+def relName(ed, anc):
+    '''Get the name of an Editable relative to an ancestor.
+    '''
+    apath = anc.ro().fullPath()
+    epath = ed.ro().fullPath()
+    assert(epath.startswith(apath))
+    return epath[len(apath) + 1:]
+
+
 def edef(*methods, **kwargs):
     '''Imitate E method suite definition.
 
