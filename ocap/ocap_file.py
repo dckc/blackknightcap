@@ -281,6 +281,21 @@ class Editable(ESuite):
                         __trueDiv=subEdFile)
 
 
+def walk_ed(top):
+    '''ocap analog to os.walk
+    '''
+    subs = [(sub, sub.ro().isDir())
+            for sub in top.subEdFiles()]
+    dirs = [s for (s, d) in subs if d]
+    nondirs = [s for (s, d) in subs if not d]
+
+    yield top, dirs, nondirs
+
+    for subd in dirs:
+        for x in walk_ed(subd):
+            yield x
+
+
 def edef(*methods, **kwargs):
     '''Imitate E method suite definition.
 
