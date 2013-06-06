@@ -28,7 +28,18 @@ __ http://www.hpl.hp.com/techreports/2006/HPL-2006-116.html
 from urlparse import urljoin
 
 
-def Readable(path, os_path, os_listdir, openf):
+class ESuite(object):
+    def __repr__(self):
+        return 'Esuite(...)'
+
+    @classmethod
+    def make(cls, *args, **kwargs):
+        suite = dict(dict([(f.__name__, f) for f in args]),
+                     **kwargs)
+        return type(cls.__name__, (ESuite, object), suite)()
+
+
+class Readable(ESuite):
     '''Wrap the python file API in the Emily/E least-authority API.
 
     os.path.join might not seem to need any authority,
@@ -38,34 +49,36 @@ def Readable(path, os_path, os_listdir, openf):
     >>> Readable('.', os.path, os.listdir, open).isDir()
     True
     '''
-    def isDir():
-        return os_path.isdir(path)
 
-    def exists():
-        return os_path.exists(path)
+    def __new__(cls, path, os_path, os_listdir, openf):
+        def isDir(_):
+            return os_path.isdir(path)
 
-    def subRdFiles():
-        return (subRdFile(n)
-                for n in os_listdir(path))
+        def exists(_):
+            return os_path.exists(path)
 
-    def subRdFile(n):
-        there = os_path.join(path, n)
-        if not there.startswith(path):
-            raise LookupError('Path does not lead to a subordinate.')
+        def subRdFiles(_):
+            return (subRdFile(n)
+                    for n in os_listdir(path))
 
-        return Readable(there, os_path, os_listdir, openf)
+        def subRdFile(_, n):
+            there = os_path.join(path, n)
+            if not there.startswith(path):
+                raise LookupError('Path does not lead to a subordinate.')
 
-    def inChannel():
-        return openf(path)
+            return Readable(there, os_path, os_listdir, openf)
 
-    def getBytes():
-        return openf(path).read()
+        def inChannel(_):
+            return openf(path)
 
-    def fullPath():
-        return os_path.abspath(path)
+        def getBytes(_):
+            return openf(path).read()
 
-    return edef(isDir, exists, subRdFiles, subRdFile, inChannel,
-                getBytes, fullPath)
+        def fullPath(_):
+            return os_path.abspath(path)
+
+        return ESuite.make(isDir, exists, subRdFiles, subRdFile, inChannel,
+                           getBytes, fullPath)
 
 
 def WebReadable(base, urlopener, RequestClass):
