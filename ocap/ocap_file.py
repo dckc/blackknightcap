@@ -30,7 +30,7 @@ from urlparse import urljoin
 
 class ESuite(object):
     def __repr__(self):
-        return 'Esuite(...)'
+        return '%s(...)' % self.__class__.__name__
 
     @classmethod
     def make(cls, *args, **kwargs):
@@ -81,10 +81,10 @@ class Readable(ESuite):
         def fullPath(_):
             return os_path.abspath(path)
 
-        return ESuite.make(isDir, exists, subRdFiles, subRdFile, inChannel,
-                           getBytes, fullPath,
-                           __div__=subRdFile,
-                           __trueDiv=subRdFile)
+        return cls.make(isDir, exists, subRdFiles, subRdFile, inChannel,
+                        getBytes, fullPath,
+                        __div__=subRdFile,
+                        __trueDiv=subRdFile)
 
 
 def WebReadable(base, urlopener, RequestClass):
@@ -275,10 +275,10 @@ class Editable(ESuite):
         def delete(_):
             os.remove(path)
 
-        return ESuite.make(ro, subEdFiles, subEdFile, outChannel,
-                           setBytes, mkDir, createNewFile, delete,
-                           __div__=subEdFile,
-                           __trueDiv=subEdFile)
+        return cls.make(ro, subEdFiles, subEdFile, outChannel,
+                        setBytes, mkDir, createNewFile, delete,
+                        __div__=subEdFile,
+                        __trueDiv=subEdFile)
 
 
 def edef(*methods, **kwargs):
