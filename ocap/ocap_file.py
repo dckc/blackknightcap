@@ -243,7 +243,7 @@ def Editable(path, os, openf):
             raise LookupError('Path does not lead to a subordinate.')
 
         return Editable(there, os, openf)
-        
+
     def outChannel():
         return openf(path, 'w')
 
