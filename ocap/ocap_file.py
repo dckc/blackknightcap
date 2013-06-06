@@ -48,6 +48,10 @@ class Readable(ESuite):
     >>> import os
     >>> Readable('.', os.path, os.listdir, open).isDir()
     True
+
+    >>> x = Readable('/x', os.path, os.listdir, open)
+    >>> (x / 'y').fullPath()
+    '/x/y'
     '''
 
     def __new__(cls, path, os_path, os_listdir, openf):
@@ -78,7 +82,9 @@ class Readable(ESuite):
             return os_path.abspath(path)
 
         return ESuite.make(isDir, exists, subRdFiles, subRdFile, inChannel,
-                           getBytes, fullPath)
+                           getBytes, fullPath,
+                           __div__=subRdFile,
+                           __trueDiv=subRdFile)
 
 
 def WebReadable(base, urlopener, RequestClass):
@@ -227,40 +233,52 @@ class _MockMostPagesOKButSome404(object):
         return StringIO('page content...')
 
 
-def Editable(path, os, openf):
-    def ro():
-        def openrd(p):
+class Editable(ESuite):
+    '''
+    >>> import os
+    >>> x = Editable('/x', os, open)
+    >>> (x / 'y').ro().fullPath()
+    '/x/y'
+
+    '''
+    def __new__(cls, path, os, openf):
+        def _openrd(p):
             return openf(p, 'r')
-        return Readable(path, os.path, os.listdir, openrd)
+        _ro = Readable(path, os.path, os.listdir, _openrd)
 
-    def subEdFiles():
-        return (subEdFile(n)
-                for n in os.listdir(path))
+        def ro(_):
+            return _ro
 
-    def subEdFile(n):
-        there = os.path.join(path, n)
-        if not there.startswith(path):
-            raise LookupError('Path does not lead to a subordinate.')
+        def subEdFiles(_):
+            return (subEdFile(n)
+                    for n in os.listdir(path))
 
-        return Editable(there, os, openf)
+        def subEdFile(_, n):
+            there = os.path.join(path, n)
+            if not there.startswith(path):
+                raise LookupError('Path does not lead to a subordinate.')
 
-    def outChannel():
-        return openf(path, 'w')
+            return Editable(there, os, openf)
 
-    def setBytes(b):
-        outChannel.write(b)
+        def outChannel(_):
+            return openf(path, 'w')
 
-    def mkDir():
-        os.mkdir(path)
+        def setBytes(_, b):
+            outChannel.write(b)
 
-    def createNewFile():
-        setBytes('')
+        def mkDir(_):
+            os.mkdir(path)
 
-    def delete():
-        os.remove(path)
+        def createNewFile(_):
+            setBytes('')
 
-    return edef(ro, subEdFiles, subEdFile, outChannel,
-                setBytes, mkDir, createNewFile, delete)
+        def delete(_):
+            os.remove(path)
+
+        return ESuite.make(ro, subEdFiles, subEdFile, outChannel,
+                           setBytes, mkDir, createNewFile, delete,
+                           __div__=subEdFile,
+                           __trueDiv=subEdFile)
 
 
 def edef(*methods, **kwargs):
