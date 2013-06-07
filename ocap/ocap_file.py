@@ -319,6 +319,15 @@ def relName(ed, anc):
     return epath[len(apath) + 1:]
 
 
+def relName_rd(rd, anc):
+    '''Get the name of a Readable relative to an ancestor.
+    '''
+    apath = anc.fullPath()
+    path = rd.fullPath()
+    assert(path.startswith(apath))
+    return path[len(apath) + 1:]
+
+
 def edef(*methods, **kwargs):
     '''Imitate E method suite definition.
 
