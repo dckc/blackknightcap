@@ -282,17 +282,31 @@ class Editable(ESuite):
 
 
 def walk_ed(top):
+    '''ocap analog to os.walk for editables
+    '''
+    for x in _walk(top, lambda ed: ed.subEdFiles()):
+        yield x
+
+
+def walk_rd(top):
+    '''ocap analog to os.walk
+    '''
+    for x in _walk(top, lambda ed: ed.subRdFiles()):
+        yield x
+
+
+def _walk(top, sub_files):
     '''ocap analog to os.walk
     '''
     subs = [(sub, sub.ro().isDir())
-            for sub in top.subEdFiles()]
+            for sub in sub_files(top)]
     dirs = [s for (s, d) in subs if d]
     nondirs = [s for (s, d) in subs if not d]
 
     yield top, dirs, nondirs
 
     for subd in dirs:
-        for x in walk_ed(subd):
+        for x in _walk(subd, sub_files):
             yield x
 
 
