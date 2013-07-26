@@ -19,6 +19,19 @@ class ESuite(object):
             setattr(cls, n, f)
 
 
+def slot(obj):
+    # python closures are read only, so we close over a mutable list.
+    return [obj]
+
+
+def val(slot):
+    return slot[0]
+
+
+def update(slot, val):
+    slot[0] = val
+
+
 def edef(*methods, **kwargs):
     '''Imitate E method suite definition.
 
