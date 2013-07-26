@@ -1,5 +1,4 @@
-'''sealing -- Emulate E's Rights Amplification mechanism in Python
-------------------------------------------------------------------
+'''sealing -- E's Rights Amplification mechanism
 
 From  `Rights Amplification section of ELib: Inter-Object Semantics`__:
 
@@ -20,8 +19,8 @@ See also:
   * `javadoc for org.erights.e.elib.sealing`__
   * `Sealers and Unsealers on the ERights Wiki`__
 
-__ http://www.erights.org/javadoc/org/erights/e/elib/sealing/package-summary.html
-__ http://wiki.erights.org/wiki/Walnut/Secure_Distributed_Computing/Capability_Patterns#Sealers_and_Unsealers
+__ http://www.erights.org/javadoc/org/erights/e/elib/sealing/package-summary.html  # noqa
+__ http://wiki.erights.org/wiki/Walnut/Secure_Distributed_Computing/Capability_Patterns#Sealers_and_Unsealers  # noqa
 
 '''
 
@@ -30,6 +29,8 @@ __contact__ = 'http://informatics.kumc.edu/'
 __copyright__ = 'Copyright (c) 2011 Univeristy of Kansas Medical Center'
 __license__ = 'Apache 2'
 __docformat__ = "restructuredtext en"
+
+from encap import ESuite, slot, val, update
 
 
 def makeBrandPair(nickname):
@@ -51,61 +52,47 @@ def makeBrandPair(nickname):
       >>> uu.unseal(x)
       Traceback (most recent call last):
       ...
-      TypeError
+      TypeError: invalid box
 
     '''
 
     noObject = object()
-    # python closures are read only, so we close over a mutable list.
-    shared = [noObject]
+    shared = slot(noObject)
 
-    def makeSealedBox(obj):
-        # python lambda expressions can't contain statements,
-        # so we define an auxiliary function
-        def _shareContent():
-            shared[0] = obj
-        box = EDef(shareContent=_shareContent,
-                   __repr__=lambda: '<%s sealed box>' % nickname
-                   )
-        return box
+    class SealedBox(ESuite):
+        def __new__(cls, obj):
+            def __repr__(_):
+                return '<%s sealed box>' % nickname
 
-    sealer = EDef(
-        seal=makeSealedBox,
-        __repr__=lambda: '<%s sealer>' % nickname
-        )
+            def shareContent(_):
+                update(shared, obj)
 
-    def _unseal(box):
-        shared[0] = noObject
-        try:
-            box.shareContent()
-        except:
-            raise TypeError
-        if (shared[0] is noObject):
-            raise TypeError
-        contents = shared[0]
-        shared[0] = noObject
-        return contents
+            return cls.make(__repr__, shareContent)
 
-    unsealer = EDef(unseal=_unseal,
-                    __repr__=lambda: '<%s unsealer>' % nickname
-                    )
+    class Sealer(ESuite):
+        def __new__(cls):
+            def __repr__(_):
+                return '<%s sealer>' % nickname
 
-    return (sealer, unsealer)
+            def seal(_, obj):
+                return SealedBox(obj)
 
+            return cls.make(__repr__, seal)
 
-class EDef:
-    '''Imitate e object definition using 'anonymous' python classes.
+    class Unsealer(ESuite):
+        def __new__(cls):
+            def __repr__(_):
+                return '<%s unsealer>' % nickname
 
-    ack: `The Python IAQ: Infrequently Answered Questions`__
-    by Peter Norvig
+            def unseal(_, box):
+                update(shared, noObject)
+                box.shareContent()
+                if (val(shared) is noObject):
+                    raise TypeError('invalid box')
+                contents = val(shared)
+                update(shared, noObject)
+                return contents
 
-    __ http://norvig.com/python-iaq.html
+            return cls.make(__repr__, unseal)
 
-    Note the use of old-style classes.
-    '''
-    def __init__(self, **entries):
-        self.__dict__.update(entries)
-
-    def __repr__(self):
-        args = ['%s=%s' % (k, repr(v)) for (k, v) in vars(self).items()]
-        return '<%s>' % ', '.join(args)
+    return (Sealer(), Unsealer())
