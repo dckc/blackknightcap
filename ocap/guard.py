@@ -1,6 +1,12 @@
-'''
+'''guard -- decorator for soft-typing
 
-adapted from: https://github.com/tav/scripts/blob/master/safelite.py
+based on `E Guards`__
+
+__ http://wiki.erights.org/wiki/Guard
+
+adapted from: `safelite.py`__ by tav
+
+__ https://github.com/tav/scripts/blob/master/safelite.py
 
 Guards can be types::
 
