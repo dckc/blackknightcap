@@ -28,17 +28,30 @@ __ http://www.hpl.hp.com/techreports/2006/HPL-2006-116.html
 from urlparse import urljoin
 
 
-def Readable(path0, os_path, os_listdir, openf):
+class ESuite(object):
+    def __repr__(self):
+        return '%s(...)' % self.__class__.__name__
+
+    @classmethod
+    def make(cls, *args, **kwargs):
+        suite = dict(dict([(f.__name__, f) for f in args]),
+                     **kwargs)
+        return type(cls.__name__, (ESuite, object), suite)()
+
+
+class Readable(ESuite):
     '''Wrap the python file API in the Emily/E least-authority API.
 
     os.path.join might not seem to need any authority,
     but its output depends on platform, so it's not a pure function.
 
     >>> import os
-    >>> cwd = Readable('.', os.path, os.listdir, open)
-    >>> cwd.isDir()
+    >>> Readable('.', os.path, os.listdir, open).isDir()
     True
 
+    >>> x = Readable('/x', os.path, os.listdir, open)
+    >>> (x / 'y').fullPath()
+    '/x/y'
     Authority only goes "down" in the filesystem:
 
     >>> cwd.subRdFile('../uncle_file')
@@ -56,37 +69,37 @@ def Readable(path0, os_path, os_listdir, openf):
     '''
     path = os_path.abspath(path0)
 
-    def isDir():
-        return os_path.isdir(path)
+    def __new__(cls, path, os_path, os_listdir, openf):
+        def isDir(_):
+            return os_path.isdir(path)
 
-    def exists():
-        return os_path.exists(path)
+        def exists(_):
+            return os_path.exists(path)
 
-    def subRdFiles():
-        return (subRdFile(n) for n in os_listdir(path))
+        def subRdFiles(_):
+            return (subRdFile(n)
+                    for n in os_listdir(path))
 
-    def subRdFile(n):
-        here = fullPath()
-        there = os_path.normpath(os_path.join(here, n))
-        if not there.startswith(here):
-            raise LookupError('Path [%s] not subordinate to [%s]' % (
-                n, here))
-        return Readable(os_path.join(path, n), os_path, os_listdir, openf)
+        def subRdFile(_, n):
+            there = os_path.normpath(os_path.join(here, n))
+            if not there.startswith(path):
+                raise LookupError('Path does not lead to a subordinate.')
 
-    def inChannel():
-        return openf(path)
+            return Readable(there, os_path, os_listdir, openf)
 
-    def getBytes():
-        return openf(path).read()
+        def inChannel(_):
+            return openf(path)
 
-    def fullPath():
-        return path
+        def getBytes(_):
+            return openf(path).read()
 
-    def __repr__():
-        return '<%s>' % fullPath()
+        def fullPath(_):
+            return os_path.abspath(path)
 
-    return edef(isDir, exists, subRdFiles, subRdFile, inChannel,
-                getBytes, fullPath)
+        return cls.make(isDir, exists, subRdFiles, subRdFile, inChannel,
+                        getBytes, fullPath,
+                        __div__=subRdFile,
+                        __trueDiv=subRdFile)
 
 
 def WebReadable(base, urlopener, RequestClass):
@@ -238,25 +251,99 @@ class _MockMostPagesOKButSome404(object):
         return StringIO('page content...')
 
 
-class Token(object):
-    '''a la Joe-E token. An authority-bearing object.
+class Editable(ESuite):
     '''
-    def __repr__(self):
-        '''subclasses should override
-        '''
-        return self.__class__.__name__ + '()'
+    >>> import os
+    >>> x = Editable('/x', os, open)
+    >>> (x / 'y').ro().fullPath()
+    '/x/y'
+
+    '''
+    def __new__(cls, path, os, openf):
+        def _openrd(p):
+            return openf(p, 'r')
+        _ro = Readable(path, os.path, os.listdir, _openrd)
+
+        def ro(_):
+            return _ro
+
+        def subEdFiles(_):
+            return (subEdFile(n)
+                    for n in os.listdir(path))
+
+        def subEdFile(_, n):
+            there = os.path.join(path, n)
+            if not there.startswith(path):
+                raise LookupError('Path does not lead to a subordinate.')
+
+            return Editable(there, os, openf)
+
+        def outChannel(_):
+            return openf(path, 'w')
+
+        def setBytes(_, b):
+            outChannel.write(b)
+
+        def mkDir(_):
+            os.mkdir(path)
+
+        def createNewFile(_):
+            setBytes('')
+
+        def delete(_):
+            os.remove(path)
+
+        return cls.make(ro, subEdFiles, subEdFile, outChannel,
+                        setBytes, mkDir, createNewFile, delete,
+                        __div__=subEdFile,
+                        __trueDiv=subEdFile)
 
 
-class Editable(Token):
-    #ro : readable;
-    #subEdFiles : unit -> editable list;
-    #subEdFile : string -> editable;
-    #outChannel : unit -> out_channel;
-    #setBytes : string -> unit;
-    #mkDir : unit -> unit;
-    #createNewFile : unit -> unit;
-    #delete : unit -> unit;
-    pass
+def walk_ed(top):
+    '''ocap analog to os.walk for editables
+    '''
+    for x in _walk(top, lambda ed: ed.subEdFiles()):
+        yield x
+
+
+def walk_rd(top):
+    '''ocap analog to os.walk
+    '''
+    for x in _walk(top, lambda ed: ed.subRdFiles()):
+        yield x
+
+
+def _walk(top, sub_files):
+    '''ocap analog to os.walk
+    '''
+    subs = [(sub, sub.ro().isDir())
+            for sub in sub_files(top)]
+    dirs = [s for (s, d) in subs if d]
+    nondirs = [s for (s, d) in subs if not d]
+
+    yield top, dirs, nondirs
+
+    for subd in dirs:
+        for x in _walk(subd, sub_files):
+            yield x
+
+
+def relName(ed, anc):
+    '''Get the name of an Editable relative to an ancestor.
+    '''
+    apath = anc.ro().fullPath()
+    epath = ed.ro().fullPath()
+    assert(epath.startswith(apath))
+    return epath[len(apath) + 1:]
+
+
+def relName_rd(rd, anc):
+    '''Get the name of a Readable relative to an ancestor.
+    '''
+    apath = anc.fullPath()
+    path = rd.fullPath()
+    assert(path.startswith(apath))
+    return path[len(apath) + 1:]
 
 
 def edef(*methods, **kwargs):
