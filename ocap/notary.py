@@ -1,4 +1,4 @@
-'''
+'''notary -- notary/inspector capability pattern
 
 based on `Vouching with Notary`__ pattern
 
@@ -26,54 +26,47 @@ Traceback (most recent call last):
 NotVouchable
 '''
 
-from encap import edef
+from encap import ESuite, slot, val, update
 
 
-def makeNotary(label=''):
-    nonObject = object()
-    vouchableObject = slot(nonObject)
+class Notary(ESuite):
+    def __new__(cls, label=''):
+        nonObject = object()
+        vouchableObject = slot(nonObject)
 
-    def vouch(obj):
-        update(vouchableObject, nonObject)
-        try:
-            obj.startVouch()
-            if (value(vouchableObject) is nonObject):
-                # why return here but not below??
-                return unvouchedException(obj)
-            else:
-                vouchedObject = value(vouchableObject)
-                update(vouchableObject, nonObject)
-                return vouchedObject
-        except Exception as ex:
-            unvouchedException(obj, ex)
+        def __repr__(_):
+            return 'Notary(%s)' % label
 
-    def vouch_repr():
-        return 'Inspector(%s)' % label
+        class Inspector(ESuite):
+            def __new__(cls):
+                def __repr__(_):
+                    return 'Inspector(%s)' % label
 
-    inspector = edef(vouch, __repr__=vouch_repr)
+                def vouch(_, obj):
+                    update(vouchableObject, nonObject)
+                    try:
+                        obj.startVouch()
+                        if (val(vouchableObject) is nonObject):
+                            # why return here but not below??
+                            return unvouchedException(obj)
+                        else:
+                            vouchedObject = val(vouchableObject)
+                            update(vouchableObject, nonObject)
+                            return vouchedObject
+                    except Exception as ex:
+                        unvouchedException(obj, ex)
 
-    def startVouch(obj):
-        update(vouchableObject, obj)
+                return cls.make(__repr__, vouch)
 
-    def getInspector():
-        return inspector
+        inspector = Inspector()
 
-    def __repr__():
-        return 'Notary(%s)' % label
+        def startVouch(_, obj):
+            update(vouchableObject, obj)
 
-    return edef(startVouch, getInspector, __repr__)
+        def getInspector(_):
+            return inspector
 
-
-def slot(init=None):
-    return [init]
-
-
-def value(slot):
-    return slot[0]
-
-
-def update(slot, val):
-    slot[0] = val
+        return cls.make(__repr__, startVouch, getInspector)
 
 
 class NotVouchable(Exception):
@@ -87,47 +80,44 @@ def unvouchedException(obj, ex):
 
 
 def WidgetInc():  # pragma: nocover
-    notary = makeNotary()
+    notary = Notary()
 
-    def makeOrderForm(salesPerson):
-        orderForm = None  # forward reference
+    class OrderForm(ESuite):
+        def __new__(cls, salesPerson):
 
-        def agent():
-            return salesPerson
+            def agent(_):
+                return salesPerson
 
-        def startVouch():
-            notary.startVouch(orderForm)
+            def startVouch(orderForm):
+                notary.startVouch(orderForm)
 
-        orderForm = edef(startVouch, agent)
-        return orderForm
+            return cls.make(startVouch, agent)
 
-    def _s():
-        def getInspector():
-            return notary.getInspector()
-        return edef(getInspector)
+    class WidgetInspectionService(ESuite):
+        '''publicly available inspector object
+        (accessible through a uri posted on Widget Inc's web site) ' '''
 
-    '''publicly available inspector object
-    (accessible through a uri posted on Widget Inc's web site) ' '''
-    WidgetInspectionService = _s()
+        def __new__(cls):
+            def getInspector(_):
+                return notary.getInspector()
+            return cls.make(getInspector)
 
     def getOrderFormFromBob():
-        return makeOrderForm("bob")
+        return OrderForm("bob")
 
-    return WidgetInspectionService, getOrderFormFromBob
+    return WidgetInspectionService(), getOrderFormFromBob
 
 
 def getOrderFormFromBobsEvilTwin():  # pragma: nocover
     """Bob's evil twinn """
-    return forgeOrderForm("bob")
+    return ForgedOrderForm("bob")
 
 
-def forgeOrderForm(salesPerson):  # pragma: nocover
-    orderForm = None  # forward reference
+class ForgedOrderForm(ESuite):  # pragma: nocover
+    def __new__(cls, salesPerson):
+        def agent(_):
+            return salesPerson
 
-    def agent():
-        return salesPerson
-
-    def startVouch():
-        pass
-    orderForm = edef(startVouch, agent)
-    return orderForm
+        def startVouch():
+            pass
+        return cls.make(startVouch, agent)
