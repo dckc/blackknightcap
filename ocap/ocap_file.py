@@ -28,7 +28,7 @@ __ http://www.hpl.hp.com/techreports/2006/HPL-2006-116.html
 from urlparse import urljoin
 
 
-def Readable(path, os_path, os_listdir, openf):
+def Readable(path0, os_path, os_listdir, openf):
     '''Wrap the python file API in the Emily/E least-authority API.
 
     os.path.join might not seem to need any authority,
@@ -54,6 +54,8 @@ def Readable(path, os_path, os_listdir, openf):
     LookupError: Path [/etc/passwd] not subordinate ...
 
     '''
+    path = os_path.abspath(path0)
+
     def isDir():
         return os_path.isdir(path)
 
@@ -78,7 +80,10 @@ def Readable(path, os_path, os_listdir, openf):
         return openf(path).read()
 
     def fullPath():
-        return os_path.abspath(path)
+        return path
+
+    def __repr__():
+        return '<%s>' % fullPath()
 
     return edef(isDir, exists, subRdFiles, subRdFile, inChannel,
                 getBytes, fullPath)
@@ -233,7 +238,16 @@ class _MockMostPagesOKButSome404(object):
         return StringIO('page content...')
 
 
-class Editable(object):
+class Token(object):
+    '''a la Joe-E token. An authority-bearing object.
+    '''
+    def __repr__(self):
+        '''subclasses should override
+        '''
+        return self.__class__.__name__ + '()'
+
+
+class Editable(Token):
     #ro : readable;
     #subEdFiles : unit -> editable list;
     #subEdFile : string -> editable;
@@ -252,7 +266,7 @@ def edef(*methods, **kwargs):
     .. todo:: consider using a metaclass instead
     ref http://stackoverflow.com/questions/100003/what-is-a-metaclass-in-python
     '''
-    lookup = dict([(f.__name__, f) for f in methods])
+    lookup = dict(kwargs, **dict([(f.__name__, f) for f in methods]))
     delegate = kwargs.get('delegate', None)
 
     class EObj(object):
@@ -262,5 +276,10 @@ def edef(*methods, **kwargs):
             if delegate is not None:
                 return getattr(delegate, n)
             raise AttributeError(n)
+
+        def __repr__(self):
+            f = lookup.get('__repr__', None)
+
+            return f() if f else 'obj(%s)' % lookup.keys()
 
     return EObj()
