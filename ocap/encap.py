@@ -24,6 +24,23 @@ class ESuite(object):
       >>> it.__dict__.keys()
       []
 
+    Inheritance is done by delegation:
+
+      >>> class Ex2(ESuite):
+      ...     def __new__(cls, x):
+      ...         x2 = Ex(x)
+      ...         def quadruple(self):
+      ...             "make it even bigger-er!"
+      ...             return x2.double() * 2
+      ...         return cls.make(quadruple, delegate=x2)
+
+      >>> it = Ex2(4)
+      >>> it.double()
+      8
+      >>> it.quadruple()
+      16
+
+
     TODO: take another look at making docstrings visible.
 
     * modulo various stack introspection mechanisms.
