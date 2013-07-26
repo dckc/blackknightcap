@@ -10,7 +10,13 @@ class ESuite(object):
     def make(cls, *args, **kwargs):
         suite = dict(dict([(f.__name__, f) for f in args]),
                      **kwargs)
-        return type(cls.__name__, (ESuite, object), suite)()
+        suite_ld = dict(suite, lift_doc=lambda _: cls.lift_doc(suite))
+        return type(cls.__name__, (ESuite, object), suite_ld)()
+
+    @classmethod
+    def lift_doc(cls, suite):
+        for n, f in suite.items():
+            setattr(cls, n, f)
 
 
 def edef(*methods, **kwargs):
