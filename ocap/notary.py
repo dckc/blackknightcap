@@ -26,7 +26,7 @@ Traceback (most recent call last):
 NotVouchable
 '''
 
-from ocap_file import edef
+from encap import edef
 
 
 def makeNotary(label=''):
