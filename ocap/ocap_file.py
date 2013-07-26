@@ -46,12 +46,14 @@ class Readable(ESuite):
     but its output depends on platform, so it's not a pure function.
 
     >>> import os
-    >>> Readable('.', os.path, os.listdir, open).isDir()
+    >>> cwd = Readable('.', os.path, os.listdir, open)
+    >>> cwd.isDir()
     True
 
     >>> x = Readable('/x', os.path, os.listdir, open)
     >>> (x / 'y').fullPath()
     '/x/y'
+
     Authority only goes "down" in the filesystem:
 
     >>> cwd.subRdFile('../uncle_file')
@@ -67,9 +69,9 @@ class Readable(ESuite):
     LookupError: Path [/etc/passwd] not subordinate ...
 
     '''
-    path = os_path.abspath(path0)
+    def __new__(cls, path0, os_path, os_listdir, openf):
+        path = os_path.abspath(path0)
 
-    def __new__(cls, path, os_path, os_listdir, openf):
         def isDir(_):
             return os_path.isdir(path)
 
@@ -81,9 +83,10 @@ class Readable(ESuite):
                     for n in os_listdir(path))
 
         def subRdFile(_, n):
-            there = os_path.normpath(os_path.join(here, n))
+            there = os_path.normpath(os_path.join(path, n))
             if not there.startswith(path):
-                raise LookupError('Path does not lead to a subordinate.')
+                raise LookupError(
+                    'Path [%s] not subordinate to %s' % (n, path))
 
             return Readable(there, os_path, os_listdir, openf)
 
