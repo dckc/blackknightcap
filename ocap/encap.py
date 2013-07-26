@@ -3,24 +3,60 @@
 
 
 class ESuite(object):
+    '''ESuite -- Encapsulated (or: E-like) method suite
+
+    Define methods in the scope of the `__new__` method. Note access
+    to constructor args does not require `self.` prefix::
+
+      >>> class Ex(ESuite):
+      ...     def __new__(cls, x):
+      ...         def double(self):
+      ...             "make it bigger!"
+      ...             return x + x
+      ...         return cls.make(double)
+
+      >>> it = Ex(4)
+      >>> it.double()
+      8
+
+    The state of the object is encapsulated*::
+
+      >>> it.__dict__.keys()
+      []
+
+    TODO: take another look at making docstrings visible.
+
+    * modulo various stack introspection mechanisms.
+    '''
     def __repr__(self):
         return '%s(...)' % self.__class__.__name__
 
     @classmethod
     def make(cls, *args, **kwargs):
-        suite = dict(dict([(f.__name__, f) for f in args]),
-                     **kwargs)
-        suite_ld = dict(suite, lift_doc=lambda _: cls.lift_doc(suite))
-        return type(cls.__name__, (ESuite, object), suite_ld)()
+        arg_methods = [(f.__name__, f) for f in args]
 
-    @classmethod
-    def lift_doc(cls, suite):
-        for n, f in suite.items():
-            setattr(cls, n, f)
+        delegate = kwargs.get('delegate', None)
+
+        def nextattr(self, n):
+            return getattr(delegate, n)
+
+        delegate_methods = [('__getattr__', nextattr)
+                            for once in [1]
+                            if delegate is not None]
+        suite = dict(arg_methods + delegate_methods,
+                     **kwargs)
+
+        return type(cls.__name__, (ESuite, object), suite)()
 
 
 def slot(obj):
-    # python closures are read only, so we close over a mutable list.
+    '''Make a mutable slot, since python (2.x) closures are-read only.
+
+    >>> x = slot(1)
+    >>> update(x, 5)
+    >>> val(x)
+    5
+    '''
     return [obj]
 
 
@@ -30,29 +66,3 @@ def val(slot):
 
 def update(slot, val):
     slot[0] = val
-
-
-def edef(*methods, **kwargs):
-    '''Imitate E method suite definition.
-
-    .. todo:: factor out overlap with `sealing.EDef`
-    .. todo:: consider using a metaclass instead
-    ref http://stackoverflow.com/questions/100003/what-is-a-metaclass-in-python
-    '''
-    lookup = dict(kwargs, **dict([(f.__name__, f) for f in methods]))
-    delegate = kwargs.get('delegate', None)
-
-    class EObj(object):
-        def __getattr__(self, n):
-            if n in lookup:
-                return lookup[n]
-            if delegate is not None:
-                return getattr(delegate, n)
-            raise AttributeError(n)
-
-        def __repr__(self):
-            f = lookup.get('__repr__', None)
-
-            return f() if f else 'obj(%s)' % lookup.keys()
-
-    return EObj()

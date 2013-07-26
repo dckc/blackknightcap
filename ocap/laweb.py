@@ -4,10 +4,10 @@
 
 from urlparse import urljoin
 
-from encap import edef
+from encap import ESuite
 
 
-def WebReadable(base, urlopener, RequestClass):
+class WebReadable(ESuite):
     '''Read-only wrapping of urllib2 in the Emily/E least-authority API.
 
     :param base: base URL
@@ -57,57 +57,54 @@ def WebReadable(base, urlopener, RequestClass):
     .. todo:: consider taking a hint/name parameter for printing.
     '''
 
-    assert hasattr(urlopener, 'open'), "oops! bad urlopener"
+    def __new__(cls, base, urlopener, RequestClass):
+        assert hasattr(urlopener, 'open'), "oops! bad urlopener"
 
-    def __repr__():
-        return 'WebReadable(...)'
-
-    def isDir():
-        return False
-
-    def exists():
-        class HeadRequest(RequestClass):
-            '''
-            ack: doshea Jan 15 2010
-            How do you send a HEAD HTTP request in Python?
-            http://stackoverflow.com/questions/107405/
-            '''
-            def get_method(self):
-                return "HEAD"
-
-        try:
-            urlopener.open(HeadRequest(base))
-            return True
-        except IOError:
+        def isDir(_):
             return False
 
-    def subRdFiles():
-        return ()
+        def exists(_):
+            class HeadRequest(RequestClass):
+                '''
+                ack: doshea Jan 15 2010
+                How do you send a HEAD HTTP request in Python?
+                http://stackoverflow.com/questions/107405/
+                '''
+                def get_method(self):
+                    return "HEAD"
 
-    def subRdFile(path):
-        there = urljoin(base, path)
-        if not there.startswith(base):
-            raise LookupError('Path does not lead to a subordinate.')
-        return WebReadable(there, urlopener, RequestClass)
+            try:
+                urlopener.open(HeadRequest(base))
+                return True
+            except IOError:
+                return False
 
-    def inChannel():
-        '''
-        .. todo:: wrap result of open() for strict confinement.
-        '''
-        return urlopener.open(base)
+        def subRdFiles(_):
+            return ()
 
-    def getBytes():
-        return inChannel().read()
+        def subRdFile(_, path):
+            there = urljoin(base, path)
+            if not there.startswith(base):
+                raise LookupError('Path does not lead to a subordinate.')
+            return WebReadable(there, urlopener, RequestClass)
 
-    def fullPath():
-        return base
+        def inChannel(_):
+            '''
+            .. todo:: wrap result of open() for strict confinement.
+            '''
+            return urlopener.open(base)
 
-    return edef(__repr__,
-                isDir, exists, subRdFiles, subRdFile, inChannel,
-                getBytes, fullPath)
+        def getBytes(self):
+            return inChannel(self).read()
+
+        def fullPath(_):
+            return base
+
+        return cls.make(isDir, exists, subRdFiles, subRdFile, inChannel,
+                        getBytes, fullPath)
 
 
-def WebPostable(base, urlopener, RequestClass):
+class WebPostable(ESuite):
     '''Extend WebReadable with POST support.
 
     >>> urlopener = _MockMostPagesOKButSome404('Z')
@@ -122,15 +119,13 @@ def WebPostable(base, urlopener, RequestClass):
     >>> doweb.subRdFile('rd').fullPath()
     'http://example/stuff/rd'
     '''
-    delegate = WebReadable(base, urlopener, RequestClass)
+    def __new__(cls, base, urlopener, RequestClass):
+        delegate = WebReadable(base, urlopener, RequestClass)
 
-    def __repr__():
-        return 'WebPostable(...)'
+        def post(_, content):
+            return urlopener.open(base, content)
 
-    def post(content):
-        return urlopener.open(base, content)
-
-    return edef(__repr__, post, delegate=delegate)
+        return cls.make(post, delegate=delegate)
 
 
 class _MockMostPagesOKButSome404(object):
