@@ -96,9 +96,51 @@ class Readable(ESuite):
 
 class ListReadable(ESuite):
     '''Simulate a readable directory using a list of pathnames.
+
+    Authorizing access to files listed on the command line is a
+    typical use.
+
+    Any file in the filesystem is fair game:
+    >>> import os
+    >>> fs = Readable('/', os.path, os.listdir, open)
+
+    @param paths: a list of authorized paths
+    @param _subRdFile: given an authorized path, turn it into a readable
+    @param _fullPath: given a possibly relative authorized path,
+                      return its full path.
+
+    >>> argv = ['prog', 'f1', '/tmp/f2']
+    >>> arg_dir = ListReadable(argv[1:],
+    ...                        lambda n: fs.subRdFile(os.path.abspath(n)),
+    ...                        lambda n: os.path.abspath(n))
+
+
+    The result works like a directory with an entry for each of the
+    given paths:
+    >>> arg_dir.subRdFile('/tmp/f2').fullPath()
+    '/tmp/f2'
+
+    No other paths are authorized:
+    >>> arg_dir.subRdFile('cheat')
+    Traceback (most recent call last):
+      ...
+    IOError: not an authorized pathname: cheat
+
+    The `_subRdFile` implementation we gave interprets relative pathnames:
+    >>> arg_dir.subRdFile('f1').fullPath().startswith(os.getcwd())
+    True
+
+    Names must match literally, not just semantically:
+    >>> arg_dir.subRdFile('./f1')
+    Traceback (most recent call last):
+      ...
+    IOError: not an authorized pathname: ./f1
+
     '''
 
-    def __new__(cls, paths, os_path, os_listdir, openf):
+    def __new__(cls, paths, _subRdFile, _fullPath):
+        paths = paths[:]  # defensive copy, since python lacks immutable lists.
+
         def isDir(_):
             return True
 
@@ -112,7 +154,7 @@ class ListReadable(ESuite):
         def subRdFile(self, n):
             if n not in paths:
                 raise IOError('not an authorized pathname: %s' % n)
-            return Readable(n, os_path, os_listdir, openf)
+            return _subRdFile(n)
 
         def inChannel(_):
             raise IOError('cannot read directory')
@@ -121,7 +163,7 @@ class ListReadable(ESuite):
             raise IOError('cannot read directory')
 
         def fullPath(_):
-            return os_path.abspath(os_path.curdir)
+            return _fullPath()
 
         return cls.make(isDir, exists, subRdFiles, subRdFile, inChannel,
                         getBytes, fullPath,
@@ -180,11 +222,7 @@ class Editable(ESuite):
 class ListEditable(ESuite):
     '''a la ListReadable
     '''
-    def __new__(cls, paths, os, openf):
-        def _openrd(p):
-            return openf(p, 'r')
-        _ro = ListReadable(paths, os.path, os.listdir, _openrd)
-
+    def __new__(cls, paths, _subEdFile, _ro):
         def ro(_):
             return _ro
 
@@ -195,7 +233,7 @@ class ListEditable(ESuite):
         def subEdFile(_, n):
             if n not in paths:
                 raise IOError('not an authorized pathname: %s' % n)
-            return Editable(n, os, openf)
+            return _subEdFile(n)
 
         def outChannel(_):
             raise IOError('cannot write directory')
