@@ -329,6 +329,9 @@ class ConfigEd(ESuite):
 
     >>> (config_dir / 'oops').ro().exists()
     False
+
+    NOTE: This is a little buggy; it should return a readable with
+    exists() = False.
     >>> config_dir / 'sqlite_db' / 'oops'
     Traceback (most recent call last):
       ...
