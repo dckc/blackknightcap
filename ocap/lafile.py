@@ -98,22 +98,17 @@ class ListReadable(ESuite):
     '''Simulate a readable directory using a list of pathnames.
 
     Authorizing access to files listed on the command line is a
-    typical use.
-
-    Any file in the filesystem is fair game:
+    typical use, where any file in the filesystem is fair game:
     >>> import os
     >>> fs = Readable('/', os.path, os.listdir, open)
 
     @param paths: a list of authorized paths
-    @param _subRdFile: given an authorized path, turn it into a readable
-    @param _fullPath: given a possibly relative authorized path,
-                      return its full path.
+    @param base: base readable
+    @param abspath: given a possibly relative authorized path,
+                    return its full path.
 
     >>> argv = ['prog', 'f1', '/tmp/f2']
-    >>> arg_dir = ListReadable(argv[1:],
-    ...                        lambda n: fs.subRdFile(os.path.abspath(n)),
-    ...                        lambda n: os.path.abspath(n))
-
+    >>> arg_dir = ListReadable(argv[1:], fs, os.path.abspath)
 
     The result works like a directory with an entry for each of the
     given paths:
@@ -138,7 +133,7 @@ class ListReadable(ESuite):
 
     '''
 
-    def __new__(cls, paths, _subRdFile, _fullPath):
+    def __new__(cls, paths, base, abspath):
         paths = paths[:]  # defensive copy, since python lacks immutable lists.
 
         def isDir(_):
@@ -148,13 +143,12 @@ class ListReadable(ESuite):
             return True
 
         def subRdFiles(self):
-            return (subRdFile(self, n)
-                    for n in paths)
+            return [self.subRdFile(n) for n in paths]
 
         def subRdFile(self, n):
             if n not in paths:
                 raise IOError('not an authorized pathname: %s' % n)
-            return _subRdFile(n)
+            return base.subRdFile(abspath(n))
 
         def inChannel(_):
             raise IOError('cannot read directory')
@@ -163,7 +157,66 @@ class ListReadable(ESuite):
             raise IOError('cannot read directory')
 
         def fullPath(_):
-            return _fullPath()
+            return abspath('')
+
+        return cls.make(isDir, exists, subRdFiles, subRdFile, inChannel,
+                        getBytes, fullPath,
+                        __div__=subRdFile,
+                        __trueDiv=subRdFile)
+
+
+class ConfigRd(ESuite):
+    '''Treat config parameters as read authorization.
+
+    >>> from ConfigParser import SafeConfigParser
+    >>> cp = SafeConfigParser()
+    >>> cp.add_section('sqlite_db')
+    >>> cp.set('sqlite_db', 'file', '/var/run/x.db')
+    >>> cp.set('sqlite_db', 'main_table', 't1')
+
+    >>> import os
+    >>> fs = Readable('/', os.path, os.listdir, open)
+
+    >>> config_dir = ConfigRd(cp, fs)
+    >>> config_dir.subRdFiles()
+    [ConfigRd(...)]
+    >>> (config_dir / 'sqlite_db').subRdFiles()
+    [Readable(...), Readable(...)]
+    >>> (config_dir / 'sqlite_db' / 'file').fullPath()
+    '/var/run/x.db'
+
+    >>> (config_dir / 'oops').exists()
+    False
+    >>> config_dir / 'sqlite_db' / 'oops'
+    Traceback (most recent call last):
+      ...
+    NoOptionError: No option 'oops' in section: 'sqlite_db'
+    '''
+
+    def __new__(cls, cp, base, section=None):
+        def isDir(_):
+            return True
+
+        def exists(_):
+            return section is None or cp.has_section(section)
+
+        def subRdFiles(self):
+            return ([self / s for s in cp.sections()]
+                    if section is None
+                    else [self / opt for opt in cp.options(section)])
+
+        def subRdFile(self, n):
+            return (ConfigRd(cp, base, n) if section is None
+                    else base.subRdFile(cp.get(section, n)))
+
+        def inChannel(_):
+            raise IOError('cannot read directory')
+
+        def getBytes(_):
+            raise IOError('cannot read directory')
+
+        def fullPath(_):
+            return base.fullPath()
 
         return cls.make(isDir, exists, subRdFiles, subRdFile, inChannel,
                         getBytes, fullPath,
@@ -187,9 +240,8 @@ class Editable(ESuite):
         def ro(_):
             return _ro
 
-        def subEdFiles(_):
-            return (subEdFile(n)
-                    for n in os.listdir(path))
+        def subEdFiles(self):
+            return [self.subEdFile(n) for n in os.listdir(path)]
 
         def subEdFile(_, n):
             there = os.path.join(path, n)
@@ -222,18 +274,17 @@ class Editable(ESuite):
 class ListEditable(ESuite):
     '''a la ListReadable
     '''
-    def __new__(cls, paths, _subEdFile, _ro):
+    def __new__(cls, paths, base, abspath):
         def ro(_):
-            return _ro
+            return base.ro()
 
-        def subEdFiles(_):
-            return (subEdFile(n)
-                    for n in paths)
+        def subEdFiles(self):
+            return [self.subEdFile(n) for n in paths]
 
         def subEdFile(_, n):
             if n not in paths:
                 raise IOError('not an authorized pathname: %s' % n)
-            return _subEdFile(n)
+            return base.subEdFile(n)
 
         def outChannel(_):
             raise IOError('cannot write directory')
