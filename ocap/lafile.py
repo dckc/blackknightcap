@@ -25,6 +25,8 @@ __ http://www.hpl.hp.com/techreports/2006/HPL-2006-116.html
 
 '''
 
+from ConfigParser import SafeConfigParser
+
 from encap import ESuite
 
 
@@ -168,7 +170,6 @@ class ListReadable(ESuite):
 class ConfigRd(ESuite):
     '''Treat config parameters as read authorization.
 
-    >>> from ConfigParser import SafeConfigParser
     >>> cp = SafeConfigParser()
     >>> cp.add_section('sqlite_db')
     >>> cp.set('sqlite_db', 'file', '/var/run/x.db')
@@ -194,6 +195,11 @@ class ConfigRd(ESuite):
     '''
 
     def __new__(cls, cp, base, section=None):
+        def get(self, n):
+            if section is None:
+                raise ValueError('to get an option value, go into a section.')
+            return cp.get(section, n)
+
         def isDir(_):
             return True
 
@@ -218,7 +224,8 @@ class ConfigRd(ESuite):
         def fullPath(_):
             return base.fullPath()
 
-        return cls.make(isDir, exists, subRdFiles, subRdFile, inChannel,
+        return cls.make(get,
+                        isDir, exists, subRdFiles, subRdFile, inChannel,
                         getBytes, fullPath,
                         __div__=subRdFile,
                         __trueDiv=subRdFile)
@@ -310,16 +317,18 @@ class ListEditable(ESuite):
 class ConfigEd(ESuite):
     '''Treat config parameters as edit (write) authorization.
 
-    >>> from ConfigParser import SafeConfigParser
-    >>> cp = SafeConfigParser()
-    >>> cp.add_section('sqlite_db')
-    >>> cp.set('sqlite_db', 'file', '/var/run/x.db')
-    >>> cp.set('sqlite_db', 'main_table', 't1')
+    >>> ini = """
+    ... [sqlite_db]
+    ... file: /var/run/x.db
+    ... main_table: t1
+    ... """
 
+    >>> from StringIO import StringIO
     >>> import os
+    >>> ini_rd = Readable('', os.path, os.listdir, lambda n: StringIO(ini))
     >>> fs = Editable('/', os, open)
 
-    >>> config_dir = ConfigEd(cp, fs)
+    >>> config_dir = ConfigEd.fromRd(ini_rd, fs)
     >>> config_dir.subEdFiles()
     [ConfigEd(...)]
     >>> (config_dir / 'sqlite_db').subEdFiles()
@@ -337,6 +346,12 @@ class ConfigEd(ESuite):
       ...
     NoOptionError: No option 'oops' in section: 'sqlite_db'
     '''
+
+    @classmethod
+    def fromRd(cls, rd, base):
+        cp = SafeConfigParser()
+        cp.readfp(rd.inChannel(), rd.fullPath())
+        return ConfigEd(cp, base)
 
     def __new__(cls, cp, base, section=None):
         def ro(_):
