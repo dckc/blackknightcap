@@ -307,6 +307,68 @@ class ListEditable(ESuite):
                         __trueDiv=subEdFile)
 
 
+class ConfigEd(ESuite):
+    '''Treat config parameters as edit (write) authorization.
+
+    >>> from ConfigParser import SafeConfigParser
+    >>> cp = SafeConfigParser()
+    >>> cp.add_section('sqlite_db')
+    >>> cp.set('sqlite_db', 'file', '/var/run/x.db')
+    >>> cp.set('sqlite_db', 'main_table', 't1')
+
+    >>> import os
+    >>> fs = Editable('/', os, open)
+
+    >>> config_dir = ConfigEd(cp, fs)
+    >>> config_dir.subEdFiles()
+    [ConfigEd(...)]
+    >>> (config_dir / 'sqlite_db').subEdFiles()
+    [Editable(...), Editable(...)]
+    >>> (config_dir / 'sqlite_db' / 'file').ro().fullPath()
+    '/var/run/x.db'
+
+    >>> (config_dir / 'oops').ro().exists()
+    False
+    >>> config_dir / 'sqlite_db' / 'oops'
+    Traceback (most recent call last):
+      ...
+    NoOptionError: No option 'oops' in section: 'sqlite_db'
+    '''
+
+    def __new__(cls, cp, base, section=None):
+        def ro(_):
+            return ConfigRd(cp, base, section)
+
+        def subEdFiles(self):
+            return ([self / s for s in cp.sections()]
+                    if section is None
+                    else [self / opt for opt in cp.options(section)])
+
+        def subEdFile(self, n):
+            return (ConfigEd(cp, base, n) if section is None
+                    else base.subEdFile(cp.get(section, n)))
+
+        def outChannel(_):
+            raise IOError()
+
+        def setBytes(_):
+            raise IOError()
+
+        def mkDir(_):
+            raise IOError('cannot make config directory')
+
+        def createNewFile(_):
+            setBytes('')
+
+        def delete(_):
+            raise IOError('cannot delete config directory')
+
+        return cls.make(ro, subEdFiles, subEdFile, outChannel,
+                        setBytes, mkDir, createNewFile, delete,
+                        __div__=subEdFile,
+                        __trueDiv=subEdFile)
+
+
 def walk_ed(top):
     '''ocap analog to os.walk for editables
     '''
