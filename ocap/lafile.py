@@ -167,7 +167,15 @@ class ListReadable(ESuite):
                         __trueDiv=subRdFile)
 
 
-class ConfigRd(ESuite):
+class ConfigDir(object):
+    @classmethod
+    def fromRd(cls, rd, base):
+        cp = SafeConfigParser()
+        cp.readfp(rd.inChannel(), rd.fullPath())
+        return cls(cp, base)
+
+
+class ConfigRd(ESuite, ConfigDir):
     '''Treat config parameters as read authorization.
 
     >>> cp = SafeConfigParser()
@@ -314,7 +322,7 @@ class ListEditable(ESuite):
                         __trueDiv=subEdFile)
 
 
-class ConfigEd(ESuite):
+class ConfigEd(ESuite, ConfigDir):
     '''Treat config parameters as edit (write) authorization.
 
     >>> ini = """
@@ -346,12 +354,6 @@ class ConfigEd(ESuite):
       ...
     NoOptionError: No option 'oops' in section: 'sqlite_db'
     '''
-
-    @classmethod
-    def fromRd(cls, rd, base):
-        cp = SafeConfigParser()
-        cp.readfp(rd.inChannel(), rd.fullPath())
-        return ConfigEd(cp, base)
 
     def __new__(cls, cp, base, section=None):
         def ro(_):
