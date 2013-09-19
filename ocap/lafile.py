@@ -357,7 +357,7 @@ class ConfigEd(ESuite, ConfigDir):
 
     def __new__(cls, cp, base, section=None):
         def ro(_):
-            return ConfigRd(cp, base, section)
+            return ConfigRd(cp, base.ro(), section)
 
         def subEdFiles(self):
             return ([self / s for s in cp.sections()]
