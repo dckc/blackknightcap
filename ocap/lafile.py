@@ -94,6 +94,41 @@ class Readable(ESuite):
                         __trueDiv=subRdFile)
 
 
+class ListReadable(ESuite):
+    '''Simulate a readable directory using a list of pathnames.
+    '''
+
+    def __new__(cls, paths, os_path, os_listdir, openf):
+        def isDir(_):
+            return True
+
+        def exists(_):
+            return True
+
+        def subRdFiles(self):
+            return (subRdFile(self, n)
+                    for n in paths)
+
+        def subRdFile(self, n):
+            if n not in paths:
+                raise IOError('not an authorized pathname: %s' % n)
+            return Readable(n, os_path, os_listdir, openf)
+
+        def inChannel(_):
+            raise IOError('cannot read directory')
+
+        def getBytes(_):
+            raise IOError('cannot read directory')
+
+        def fullPath(_):
+            return os_path.abspath(os_path.curdir)
+
+        return cls.make(isDir, exists, subRdFiles, subRdFile, inChannel,
+                        getBytes, fullPath,
+                        __div__=subRdFile,
+                        __trueDiv=subRdFile)
+
+
 class Editable(ESuite):
     '''
     >>> import os
@@ -135,6 +170,47 @@ class Editable(ESuite):
 
         def delete(_):
             os.remove(path)
+
+        return cls.make(ro, subEdFiles, subEdFile, outChannel,
+                        setBytes, mkDir, createNewFile, delete,
+                        __div__=subEdFile,
+                        __trueDiv=subEdFile)
+
+
+class ListEditable(ESuite):
+    '''a la ListReadable
+    '''
+    def __new__(cls, paths, os, openf):
+        def _openrd(p):
+            return openf(p, 'r')
+        _ro = ListReadable(paths, os.path, os.listdir, _openrd)
+
+        def ro(_):
+            return _ro
+
+        def subEdFiles(_):
+            return (subEdFile(n)
+                    for n in paths)
+
+        def subEdFile(_, n):
+            if n not in paths:
+                raise IOError('not an authorized pathname: %s' % n)
+            return Editable(n, os, openf)
+
+        def outChannel(_):
+            raise IOError('cannot write directory')
+
+        def setBytes(_, b):
+            raise IOError('cannot write directory')
+
+        def mkDir(_):
+            raise IOError('cannot make list directory')
+
+        def createNewFile(_):
+            setBytes('')
+
+        def delete(_):
+            raise IOError('cannot delete list directory')
 
         return cls.make(ro, subEdFiles, subEdFile, outChannel,
                         setBytes, mkDir, createNewFile, delete,
