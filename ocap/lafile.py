@@ -77,7 +77,7 @@ class Readable(ESuite):
             there = os_path.normpath(os_path.join(path, n))
             if not there.startswith(path):
                 raise LookupError(
-                    'Path [%s] not subordinate to %s' % (n, path))
+                    'Path [%s] not subordinate to [%s]' % (n, path))
 
             return Readable(there, os_path, os_listdir, openf)
 
@@ -169,8 +169,8 @@ class ListReadable(ESuite):
 
 class ConfigDir(object):
     @classmethod
-    def fromRd(cls, rd, base):
-        cp = SafeConfigParser()
+    def fromRd(cls, rd, base, defaults=None):
+        cp = SafeConfigParser(defaults)
         cp.readfp(rd.inChannel(), rd.fullPath())
         return cls(cp, base)
 
