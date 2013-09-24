@@ -69,9 +69,9 @@ class Readable(ESuite):
         def exists(_):
             return os_path.exists(path)
 
-        def subRdFiles(_):
-            return (subRdFile(n)
-                    for n in os_listdir(path))
+        def subRdFiles(self):
+            return [self.subRdFile(n)
+                    for n in os_listdir(path)]
 
         def subRdFile(_, n):
             there = os_path.normpath(os_path.join(path, n))
@@ -290,8 +290,10 @@ class ListEditable(ESuite):
     '''a la ListReadable
     '''
     def __new__(cls, paths, base, abspath):
+        _ro = ListReadable(paths, base.ro(), abspath)
+
         def ro(_):
-            return base.ro()
+            return _ro
 
         def subEdFiles(self):
             return [self.subEdFile(n) for n in paths]
@@ -392,21 +394,22 @@ class ConfigEd(ESuite, ConfigDir):
 def walk_ed(top):
     '''ocap analog to os.walk for editables
     '''
-    for x in _walk(top, lambda ed: ed.subEdFiles()):
+    for x in _walk(top, lambda ed: ed.subEdFiles(),
+                   ro=lambda ed: ed.ro()):
         yield x
 
 
 def walk_rd(top):
     '''ocap analog to os.walk
     '''
-    for x in _walk(top, lambda ed: ed.subRdFiles()):
+    for x in _walk(top, lambda rd: rd.subRdFiles()):
         yield x
 
 
-def _walk(top, sub_files):
+def _walk(top, sub_files, ro=lambda rd: rd):
     '''ocap analog to os.walk
     '''
-    subs = [(sub, sub.ro().isDir())
+    subs = [(sub, ro(sub).isDir())
             for sub in sub_files(top)]
     dirs = [s for (s, d) in subs if d]
     nondirs = [s for (s, d) in subs if not d]
@@ -414,7 +417,7 @@ def _walk(top, sub_files):
     yield top, dirs, nondirs
 
     for subd in dirs:
-        for x in _walk(subd, sub_files):
+        for x in _walk(subd, sub_files, ro):
             yield x
 
 
