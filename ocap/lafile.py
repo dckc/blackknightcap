@@ -268,8 +268,8 @@ class Editable(ESuite):
         def outChannel(_):
             return openf(path, 'w')
 
-        def setBytes(_, b):
-            outChannel.write(b)
+        def setBytes(self, b):
+            outChannel(self).write(b)
 
         def mkDir(_):
             os.mkdir(path)
